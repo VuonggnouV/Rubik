@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Rubik 3D - Khối Rubik Tương Tác Cực Vibe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    :root {
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007b;
+      --neon-purple: #9d00ff;
+      --neon-yellow: #ffe600;
+      --neon-green: #00ff66;
+      --neon-orange: #ff6a00;
+      --dark-bg: #070913;
+      --glass-bg: rgba(14, 18, 36, 0.72);
+      --glass-border: rgba(0, 243, 255, 0.25);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+      --text-main: #f0f4fc;
+      --text-muted: #8a99b5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--dark-bg);
+      background-image:
+        radial-gradient(circle at 50% 30%, rgba(157, 0, 255, 0.15), transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(0, 243, 255, 0.12), transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(255, 0, 123, 0.12), transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      color: var(--text-main);
+      font-family: 'Rajdhani', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Canvas 3D viewport */
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      cursor: grab;
+    }
+
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    /* Ambient Cyber Vignette */
+    .vignette-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+    }
+
+    /* Glass Panels */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      box-shadow: var(--glass-shadow);
+      pointer-events: auto;
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(0, 243, 255, 0.55);
+      box-shadow: 0 10px 40px rgba(0, 243, 255, 0.18);
+    }
+
+    /* Header Nav */
+    .top-header {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 10px 24px;
+    }
+
+    .game-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Orbitron', monospace;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
+    }
+
+    .game-logo .cube-icon {
+      color: var(--neon-cyan);
+      font-size: 1.3rem;
+      animation: pulseGlow 2.5s infinite alternate;
+    }
+
+    .stats-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 0 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--neon-yellow);
+      text-shadow: 0 0 8px rgba(255, 230, 0, 0.5);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Action Buttons */
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 8px 14px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      letter-spacing: 0.8px;
+    }
+
+    .btn-action:hover {
+      background: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    .btn-action.highlight {
+      background: linear-gradient(135deg, rgba(255, 0, 123, 0.3), rgba(157, 0, 255, 0.3));
+      border-color: var(--neon-pink);
+    }
+
+    .btn-action.highlight:hover {
+      background: linear-gradient(135deg, rgba(255, 0, 123, 0.5), rgba(157, 0, 255, 0.5));
+      box-shadow: 0 0 16px rgba(255, 0, 123, 0.6);
+    }
+
+    /* ========================================================
+       SURROUNDING ROTATION BUTTONS & GUIDES (AROUND SCREEN)
+       ======================================================== */
+    .nav-guide-bar {
+      position: absolute;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+    }
+
+    .side-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .side-label .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* Button Styles for Rubik moves */
+    .cube-btn {
+      background: rgba(18, 24, 46, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.16s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .cube-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 0 16px var(--glow-color, rgba(0, 243, 255, 0.6));
+      border-color: var(--glow-color, var(--neon-cyan));
+    }
+
+    .cube-btn:active,
+    .cube-btn.btn-pressed {
+      transform: scale(0.92) !important;
+      border-color: var(--neon-yellow) !important;
+      box-shadow: 0 0 22px var(--neon-yellow), inset 0 0 10px rgba(255, 230, 0, 0.45) !important;
+      color: #fff !important;
+    }
+
+    .btn-action.btn-pressed {
+      transform: translateY(2px) scale(0.96) !important;
+      border-color: var(--neon-cyan) !important;
+      box-shadow: 0 0 20px var(--neon-cyan) !important;
+    }
+
+    .cube-btn .btn-key {
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .cube-btn .btn-sub {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Floating Keystroke HUD */
+    .key-toast {
+      position: absolute;
+      bottom: 125px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      background: rgba(10, 14, 28, 0.94);
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.45);
+      backdrop-filter: blur(12px);
+      padding: 7px 18px;
+      border-radius: 24px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #fff;
+      z-index: 60;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastPop 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .key-toast .toast-key {
+      color: var(--neon-yellow);
+      background: rgba(255, 230, 0, 0.15);
+      border: 1px solid rgba(255, 230, 0, 0.4);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    @keyframes toastPop {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(14px) scale(0.9);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    /* Non-obstructive Quick Guide Panel on Left */
+    .quick-guide-panel {
+      position: absolute;
+      left: 20px;
+      top: 135px;
+      width: 220px;
+      z-index: 15;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+    }
+
+    .quick-guide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.74rem;
+      color: var(--neon-cyan);
+      letter-spacing: 0.8px;
+      cursor: pointer;
+    }
+
+    .quick-guide-toggle {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      border-radius: 4px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .quick-guide-toggle:hover {
+      background: var(--neon-cyan);
+      color: #000;
+    }
+
+    .quick-guide-body {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .quick-guide-panel.collapsed .quick-guide-body {
+      display: none;
+    }
+
+    .quick-guide-panel.collapsed {
+      width: auto;
+      padding: 8px 12px;
+    }
+
+    .qg-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #cbd5e1;
+      font-size: 0.76rem;
+    }
+
+    .qg-row kbd {
+      background: rgba(0, 243, 255, 0.12);
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      color: var(--neon-cyan);
+      font-weight: 700;
+    }
+
+    .qg-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 3px 0;
+    }
+
+    /* TOP (U / U') */
+    #bar-top {
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      flex-direction: row;
+      border-top: 3px solid #ffffff;
+      --glow-color: #ffffff;
+    }
+
+    #bar-top .cube-btn {
+      width: 72px;
+      height: 48px;
+    }
+
+    /* BOTTOM (D / D') */
+    #bar-bottom {
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      flex-direction: row;
+      border-bottom: 3px solid var(--neon-yellow);
+      --glow-color: var(--neon-yellow);
+    }
+
+    #bar-bottom .cube-btn {
+      width: 72px;
+      height: 48px;
+    }
+
+    /* LEFT (L / L') */
+    #bar-left {
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      flex-direction: column;
+      border-left: 3px solid var(--neon-orange);
+      --glow-color: var(--neon-orange);
+    }
+
+    #bar-left .cube-btn {
+      width: 68px;
+      height: 52px;
+    }
+
+    /* RIGHT (R / R') */
+    #bar-right {
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      flex-direction: column;
+      border-right: 3px solid var(--neon-pink);
+      --glow-color: var(--neon-pink);
+    }
+
+    #bar-right .cube-btn {
+      width: 68px;
+      height: 52px;
+    }
+
+    /* FRONT (F / F') - Bottom Left Corner */
+    #bar-front {
+      left: 20px;
+      bottom: 20px;
+      flex-direction: column;
+      border-left: 3px solid var(--neon-green);
+      --glow-color: var(--neon-green);
+    }
+
+    #bar-front .btns-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    #bar-front .cube-btn {
+      width: 64px;
+      height: 46px;
+    }
+
+    /* BACK (B / B') - Bottom Right Corner */
+    #bar-back {
+      right: 20px;
+      bottom: 20px;
+      flex-direction: column;
+      border-right: 3px solid var(--neon-cyan);
+      --glow-color: var(--neon-cyan);
+    }
+
+    #bar-back .btns-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    #bar-back .cube-btn {
+      width: 64px;
+      height: 46px;
+    }
+
+    /* CENTER SLICES / EXTRA BAR (Middle Left / Right) */
+    .slice-bar {
+      position: absolute;
+      z-index: 10;
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+    }
+
+    #bar-middle {
+      left: 20px;
+      top: 80px;
+      flex-direction: column;
+    }
+
+    #bar-middle .slice-title {
+      font-size: 0.68rem;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    #bar-middle .slice-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    #bar-middle .mini-btn {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      font-family: 'Orbitron', monospace;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #bar-middle .mini-btn:hover {
+      background: rgba(157, 0, 255, 0.4);
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 10px var(--neon-purple);
+    }
+
+    /* Camera View Presets Bar (Top Right) */
+    #bar-camera {
+      right: 20px;
+      top: 80px;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    #bar-camera .cam-title {
+      font-size: 0.68rem;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    #bar-camera .cam-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    #bar-camera .cam-btn {
+      padding: 5px 9px;
+      font-size: 0.72rem;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #bar-camera .cam-btn:hover {
+      background: rgba(0, 243, 255, 0.25);
+      border-color: var(--neon-cyan);
+      color: #fff;
+    }
+
+    /* Instructions / Help floating badge */
+    .help-hint {
+      position: absolute;
+      top: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(7, 9, 19, 0.65);
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+    }
+
+    .help-hint span {
+      color: var(--neon-cyan);
+      font-weight: 700;
+    }
+
+    /* Modal Guide */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      width: 90%;
+      max-width: 580px;
+      padding: 30px;
+      position: relative;
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .modal-backdrop.show .modal-box {
+      transform: translateY(0);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--neon-pink);
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--neon-cyan);
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    }
+
+    .guide-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .guide-item {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border-left: 3px solid var(--neon-cyan);
+    }
+
+    .guide-item strong {
+      color: var(--neon-yellow);
+      font-family: 'Orbitron', monospace;
+    }
+
+    /* Victory Modal */
+    #victory-modal .modal-box {
+      text-align: center;
+      border-color: var(--neon-green);
+      box-shadow: 0 0 50px rgba(0, 255, 102, 0.3);
+    }
+
+    .trophy-icon {
+      font-size: 3.5rem;
+      margin-bottom: 10px;
+      animation: bounce 1s infinite alternate;
+    }
+
+    /* Move history ribbon */
+    .history-badge {
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(14, 18, 36, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.82rem;
+      color: var(--neon-cyan);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 80%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    /* Keyframe Animations */
+    @keyframes pulseGlow {
+      from {
+        transform: scale(1);
+        filter: drop-shadow(0 0 4px var(--neon-cyan));
+      }
+
+      to {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 12px var(--neon-purple));
+      }
+    }
+
+    @keyframes bounce {
+      from {
+        transform: translateY(0);
+      }
+
+      to {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 860px) {
+      .top-header {
+        width: 95%;
+        padding: 8px 14px;
+        gap: 10px;
+      }
+
+      .game-logo span {
+        display: none;
+      }
+
+      #bar-left {
+        left: 8px;
+      }
+
+      #bar-right {
+        right: 8px;
+      }
+
+      #bar-front {
+        left: 8px;
+        bottom: 8px;
+      }
+
+      #bar-back {
+        right: 8px;
+        bottom: 8px;
+      }
+
+      #bar-bottom {
+        bottom: 8px;
+      }
+
+      #bar-top {
+        top: 72px;
+      }
+
+      .cube-btn {
+        transform: scale(0.9);
+      }
+
+      .help-hint {
+        display: none;
+      }
+    }
+
+    /* Cyber Hand Tracking HUD Widget (Góc dưới bên phải) */
+    .hand-hud {
+      position: absolute;
+      right: 20px;
+      bottom: 84px;
+      width: 290px;
+      z-index: 30;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.25);
+      animation: toastPop 0.3s ease;
+    }
+
+    .hand-hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hud-status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .hud-dot.waiting {
+      background: var(--neon-yellow);
+      box-shadow: 0 0 8px var(--neon-yellow);
+      animation: pulseGlow 1.2s infinite alternate;
+    }
+
+    .hud-btn-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .hud-btn-close:hover {
+      color: var(--neon-pink);
+    }
+
+    .hud-view-container {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      background: #05070e;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 243, 255, 0.25);
+    }
+
+    #hand-canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .hud-crosshair {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(0, 243, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 243, 255, 0.08) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .hud-hand-guide-overlay {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.68rem;
+      color: var(--neon-cyan);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .hud-telemetry {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 6px 8px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .tele-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tele-label {
+      font-size: 0.55rem;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .tele-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--neon-yellow);
+    }
+
+    .btn-action.active-glow {
+      border-color: var(--neon-green) !important;
+      box-shadow: 0 0 16px var(--neon-green) !important;
+      background: rgba(0, 255, 102, 0.25) !important;
+    }
+  </style>
+
+  <!-- External 3D, Confetti & Google MediaPipe Hands via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+  <div class="vignette-overlay"></div>
+
+  <!-- TOP HEADER (Logo, Timer, Move count, Main actions) -->
+  <header class="top-header glass-card">
+    <div class="game-logo">
+      <span class="cube-icon">⬢</span>
+      <span>CYBER RUBIK</span>
+    </div>
+
+    <div class="stats-group">
+      <div class="stat-item">
+        <span class="stat-label">Thời gian</span>
+        <span class="stat-value" id="timer-val">00:00</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Số bước</span>
+        <span class="stat-value" id="move-val">0</span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn-action highlight" id="btn-handtrack" onclick="toggleHandTracking()" title="Bật/Tắt cảm ứng 2 bàn tay qua Camera" style="border-color: var(--neon-cyan); background: linear-gradient(135deg, rgba(0,243,255,0.22), rgba(157,0,255,0.22));">
+        <span id="handtrack-icon">🖐️</span> <span id="handtrack-text">CẢM ỨNG TAY</span>
+      </button>
+      <button class="btn-action highlight" id="btn-scramble" title="Xáo trộn khối Rubik (Phím Space)">
+        <span>⚡</span> XÁO TRỘN
+      </button>
+      <button class="btn-action" id="btn-reset" title="Đặt lại về trạng thái ban đầu (Phím Del/Backspace)">
+        <span>↺</span> LÀM MỚI
+      </button>
+      <button class="btn-action" id="btn-sound" title="Bật/Tắt âm thanh xoay (Phím P)">
+        <span id="sound-icon">🔊</span>
+      </button>
+      <button class="btn-action" id="btn-help" title="Xem hướng dẫn chi tiết (Phím H)">
+        <span>❓</span> GUIDE
+      </button>
+    </div>
+  </header>
+
+  <!-- NON-OBSTRUCTIVE QUICK GUIDE PANEL (Đặt ở cạnh trái, hoàn toàn không che khối Rubik) -->
+  <div class="quick-guide-panel glass-card" id="quick-guide">
+    <div class="quick-guide-header" onclick="toggleQuickGuide()">
+      <span>⌨️ HƯỚNG DẪN ĐIỀU KHIỂN</span>
+      <button class="quick-guide-toggle" id="qg-toggle-btn" title="Thu gọn / Mở rộng">−</button>
+    </div>
+    <div class="quick-guide-body" id="quick-guide-body">
+      <div class="qg-row" style="color:var(--neon-green); font-weight:700;"><span>🖐️ Cảm ứng tay (Cam)</span><span style="font-size:0.65rem;">Cầm & vặn cổ tay</span></div>
+      <div class="qg-row" style="color:var(--neon-yellow); font-weight:700;"><span>👆 Chạm vuốt 3D</span><span style="font-size:0.65rem;">Kéo thẳng mặt Rubik</span></div>
+      <div class="qg-divider"></div>
+      <div class="qg-row"><span>Mặt Trên U/U'</span><div><kbd>U / ⇧U</kbd> <kbd>1 / 2</kbd></div></div>
+      <div class="qg-row"><span>Mặt Dưới D/D'</span><div><kbd>D / ⇧D</kbd> <kbd>3 / 4</kbd></div></div>
+      <div class="qg-row"><span>Mặt Trái L/L'</span><div><kbd>L / ⇧L</kbd> <kbd>5 / 6</kbd></div></div>
+      <div class="qg-row"><span>Mặt Phải R/R'</span><div><kbd>R / ⇧R</kbd> <kbd>7 / 8</kbd></div></div>
+      <div class="qg-row"><span>Mặt Trước F/F'</span><div><kbd>F / ⇧F</kbd> <kbd>9 / 0</kbd></div></div>
+      <div class="qg-row"><span>Mặt Sau B/B'</span><div><kbd>B / ⇧B</kbd> <kbd>- / =</kbd></div></div>
+      <div class="qg-divider"></div>
+      <div class="qg-row"><span>Xoay Camera 3D</span><kbd>← ↑ → ↓</kbd></div>
+      <div class="qg-row"><span>Đổi góc Camera</span><kbd>Phím C</kbd></div>
+      <div class="qg-row"><span>Xáo trộn 20 bước</span><kbd>Space</kbd></div>
+      <div class="qg-row"><span>Làm mới / Reset</span><kbd>Del / Backspace</kbd></div>
+    </div>
+  </div>
+
+  <!-- FLOATING KEYSTROKE HUD -->
+  <div id="key-toast" class="key-toast" style="display: none;"></div>
+
+  <!-- CYBER WEBCAM HAND HUD (Góc dưới bên phải) -->
+  <div id="hand-hud" class="hand-hud glass-card" style="display: none;">
+    <div class="hand-hud-header">
+      <div class="hud-status-badge">
+        <span class="hud-dot waiting" id="hud-dot"></span>
+        <span id="hud-status-text">Đang kết nối camera...</span>
+      </div>
+      <button class="hud-btn-close" onclick="toggleHandTracking()" title="Tắt camera">&times;</button>
+    </div>
+    <div class="hud-view-container">
+      <video id="webcam-video" playsinline style="display: none;"></video>
+      <canvas id="hand-canvas" width="280" height="200"></canvas>
+      <div class="hud-crosshair"></div>
+      <div class="hud-hand-guide-overlay" id="hud-guide-hint">Giơ 2 bàn tay trước camera</div>
+    </div>
+    <div class="hud-telemetry">
+      <div class="tele-item">
+        <span class="tele-label">SỐ TAY</span>
+        <span class="tele-val" id="tele-hands">0</span>
+      </div>
+      <div class="tele-item">
+        <span class="tele-label">THAO TÁC</span>
+        <span class="tele-val" id="tele-mode" style="color:var(--neon-green)">Tự do</span>
+      </div>
+      <div class="tele-item">
+        <span class="tele-label">ĐỘ VẶN CỔ TAY</span>
+        <span class="tele-val" id="tele-angle">0°</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SURROUNDING ROTATION BUTTONS & GUIDES
+       ======================================================== -->
+
+  <!-- 1. TOP EDGE (U / U') - White Face -->
+  <div class="nav-guide-bar glass-card" id="bar-top">
+    <div class="side-label" style="color: #ffffff;">
+      <span class="dot" style="background:#ffffff; color:#ffffff;"></span>
+      <span>MẶT TRÊN [U]</span>
+    </div>
+    <button class="cube-btn" data-move="U" title="Xoay mặt Trên theo chiều kim đồng hồ (Phím U hoặc 1)">
+      <div class="btn-key">U ↻</div>
+      <div class="btn-sub">Thuận</div>
+    </button>
+    <button class="cube-btn" data-move="U'" title="Xoay mặt Trên ngược chiều kim đồng hồ (Phím Shift+U hoặc 2)">
+      <div class="btn-key">U' ↺</div>
+      <div class="btn-sub">Ngược</div>
+    </button>
+  </div>
+
+  <!-- 2. BOTTOM EDGE (D / D') - Yellow Face -->
+  <div class="nav-guide-bar glass-card" id="bar-bottom">
+    <div class="side-label" style="color: var(--neon-yellow);">
+      <span class="dot" style="background:var(--neon-yellow); color:var(--neon-yellow);"></span>
+      <span>MẶT DƯỚI [D]</span>
+    </div>
+    <button class="cube-btn" data-move="D" title="Xoay mặt Dưới theo chiều kim đồng hồ (Phím D hoặc 3)">
+      <div class="btn-key">D ↻</div>
+      <div class="btn-sub">Thuận</div>
+    </button>
+    <button class="cube-btn" data-move="D'" title="Xoay mặt Dưới ngược chiều kim đồng hồ (Phím Shift+D hoặc 4)">
+      <div class="btn-key">D' ↺</div>
+      <div class="btn-sub">Ngược</div>
+    </button>
+  </div>
+
+  <!-- 3. LEFT EDGE (L / L') - Orange Face -->
+  <div class="nav-guide-bar glass-card" id="bar-left">
+    <div class="side-label" style="color: var(--neon-orange);">
+      <span class="dot" style="background:var(--neon-orange); color:var(--neon-orange);"></span>
+      <span>TRÁI [L]</span>
+    </div>
+    <button class="cube-btn" data-move="L" title="Xoay mặt Trái theo chiều kim đồng hồ (Phím L hoặc 5)">
+      <div class="btn-key">L ↻</div>
+      <div class="btn-sub">Lên/Thuận</div>
+    </button>
+    <button class="cube-btn" data-move="L'" title="Xoay mặt Trái ngược chiều kim đồng hồ (Phím Shift+L hoặc 6)">
+      <div class="btn-key">L' ↺</div>
+      <div class="btn-sub">Xuống/Ngược</div>
+    </button>
+  </div>
+
+  <!-- 4. RIGHT EDGE (R / R') - Pink/Red Face -->
+  <div class="nav-guide-bar glass-card" id="bar-right">
+    <div class="side-label" style="color: var(--neon-pink);">
+      <span class="dot" style="background:var(--neon-pink); color:var(--neon-pink);"></span>
+      <span>PHẢI [R]</span>
+    </div>
+    <button class="cube-btn" data-move="R" title="Xoay mặt Phải theo chiều kim đồng hồ (Phím R hoặc 7)">
+      <div class="btn-key">R ↻</div>
+      <div class="btn-sub">Lên/Thuận</div>
+    </button>
+    <button class="cube-btn" data-move="R'" title="Xoay mặt Phải ngược chiều kim đồng hồ (Phím Shift+R hoặc 8)">
+      <div class="btn-key">R' ↺</div>
+      <div class="btn-sub">Xuống/Ngược</div>
+    </button>
+  </div>
+
+  <!-- 5. FRONT FACE (F / F') - Green Face (Góc Trái Dưới) -->
+  <div class="nav-guide-bar glass-card" id="bar-front">
+    <div class="side-label" style="color: var(--neon-green);">
+      <span class="dot" style="background:var(--neon-green); color:var(--neon-green);"></span>
+      <span>TRƯỚC [F]</span>
+    </div>
+    <div class="btns-row">
+      <button class="cube-btn" data-move="F" title="Xoay mặt Trước theo chiều kim đồng hồ (Phím F hoặc 9)">
+        <div class="btn-key">F ↻</div>
+        <div class="btn-sub">Thuận</div>
+      </button>
+      <button class="cube-btn" data-move="F'" title="Xoay mặt Trước ngược chiều kim đồng hồ (Phím Shift+F hoặc 0)">
+        <div class="btn-key">F' ↺</div>
+        <div class="btn-sub">Ngược</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. BACK FACE (B / B') - Blue Face (Góc Phải Dưới) -->
+  <div class="nav-guide-bar glass-card" id="bar-back">
+    <div class="side-label" style="color: var(--neon-cyan);">
+      <span class="dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span>
+      <span>SAU [B]</span>
+    </div>
+    <div class="btns-row">
+      <button class="cube-btn" data-move="B" title="Xoay mặt Sau theo chiều kim đồng hồ (Phím B hoặc -)">
+        <div class="btn-key">B ↻</div>
+        <div class="btn-sub">Thuận</div>
+      </button>
+      <button class="cube-btn" data-move="B'" title="Xoay mặt Sau ngược chiều kim đồng hồ (Phím Shift+B hoặc =)">
+        <div class="btn-key">B' ↺</div>
+        <div class="btn-sub">Ngược</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 7. SLICE LAYERS (M, E, S) - Top Left Bar -->
+  <div class="slice-bar glass-card" id="bar-middle">
+    <span class="slice-title">TẦNG GIỮA (SLICES)</span>
+    <div class="slice-row">
+      <button class="mini-btn" data-move="M" title="Tầng giữa đứng M (Phím M)">M ↓</button>
+      <button class="mini-btn" data-move="M'" title="Tầng giữa đứng M ngược (Phím Shift+M)">M' ↑</button>
+      <button class="mini-btn" data-move="E" title="Tầng giữa ngang E (Phím E)">E →</button>
+      <button class="mini-btn" data-move="S" title="Tầng giữa trước S (Phím S)">S ↻</button>
+    </div>
+  </div>
+
+  <!-- 8. CAMERA PRESETS - Top Right Bar -->
+  <div class="slice-bar glass-card" id="bar-camera">
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+      <span class="cam-title">GÓC CAMERA</span>
+      <span class="kbd-badge" style="margin-bottom:4px;">Phím C / Mũi tên</span>
+    </div>
+    <div class="cam-btns">
+      <button class="cam-btn" onclick="setCameraView('iso')" title="Góc phối cảnh 3D">3D ISO</button>
+      <button class="cam-btn" onclick="setCameraView('front')" title="Nhìn thẳng mặt trước">Trước</button>
+      <button class="cam-btn" onclick="setCameraView('top')" title="Nhìn từ trên xuống">Trên</button>
+      <button class="cam-btn" onclick="setCameraView('right')" title="Nhìn từ bên phải">Phải</button>
+    </div>
+  </div>
+
+  <!-- Move history ribbon -->
+  <div class="history-badge" id="history-box">
+    <span>LỊCH SỬ BƯỚC:</span>
+    <span id="history-moves">Sẵn sàng xoay...</span>
+  </div>
+
+  <!-- GUIDE MODAL -->
+  <div class="modal-backdrop" id="help-modal">
+    <div class="modal-box glass-card" style="max-width: 640px;">
+      <button class="modal-close" onclick="toggleHelpModal()">&times;</button>
+      <h2 class="modal-title">⌨️ TOÀN BỘ PHÍM TẮT ĐIỀU KHIỂN</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 12px;">
+        Bạn có thể thao tác bằng <strong>chuột</strong> bấm vào các nút quanh màn hình hoặc dùng <strong>bàn
+          phím</strong>:
+      </p>
+
+      <div class="guide-grid">
+        <div class="guide-item">
+          <strong>U / Shift+U (hoặc 1 / 2)</strong>: Mặt Trên [White]
+        </div>
+        <div class="guide-item">
+          <strong>D / Shift+D (hoặc 3 / 4)</strong>: Mặt Dưới [Yellow]
+        </div>
+        <div class="guide-item">
+          <strong>L / Shift+L (hoặc 5 / 6)</strong>: Mặt Trái [Orange]
+        </div>
+        <div class="guide-item">
+          <strong>R / Shift+R (hoặc 7 / 8)</strong>: Mặt Phải [Red]
+        </div>
+        <div class="guide-item">
+          <strong>F / Shift+F (hoặc 9 / 0)</strong>: Mặt Trước [Green]
+        </div>
+        <div class="guide-item">
+          <strong>B / Shift+B (hoặc - / =)</strong>: Mặt Sau [Blue]
+        </div>
+        <div class="guide-item">
+          <strong>M / Shift+M, E, S</strong>: Các tầng giữa (Slices)
+        </div>
+        <div class="guide-item">
+          <strong>Mũi tên ← ↑ → ↓</strong>: Xoay góc Camera 3D
+        </div>
+        <div class="guide-item">
+          <strong>Phím C</strong>: Đổi góc nhìn Camera cài sẵn
+        </div>
+        <div class="guide-item">
+          <strong>Phím Space</strong>: ⚡ Xáo trộn tự động 20 bước
+        </div>
+        <div class="guide-item">
+          <strong>Phím Del / Backspace</strong>: ↺ Làm mới khối
+        </div>
+        <div class="guide-item">
+          <strong>Phím P</strong>: 🔊 Bật / Tắt âm thanh
+        </div>
+      </div>
+
+      <p style="color: var(--neon-cyan); font-size: 0.9rem; margin-top: 10px;">
+        💡 <em>Mẹo:</em> Khi bấm bất kỳ phím nào, nút tương ứng quanh màn hình sẽ phát sáng nhấp nháy tức thì!
+      </p>
+    </div>
+  </div>
+
+  <!-- VICTORY MODAL -->
+  <div class="modal-backdrop" id="victory-modal">
+    <div class="modal-box glass-card">
+      <div class="trophy-icon">🏆</div>
+      <h2 class="modal-title" style="color: var(--neon-green);">CHIẾN THẮNG! XUẤT SẮC!</h2>
+      <p style="color: #fff; font-size: 1.1rem; margin-bottom: 20px;">
+        Bạn đã giải thành công toàn bộ khối Rubik 3x3!
+      </p>
+      <div class="stats-group" style="justify-content: center; margin-bottom: 25px; border:none;">
+        <div class="stat-item">
+          <span class="stat-label">Thời gian giải</span>
+          <span class="stat-value" id="win-time">00:00</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Tổng số bước</span>
+          <span class="stat-value" id="win-moves">0</span>
+        </div>
+      </div>
+      <button class="btn-action highlight" onclick="restartAfterWin()" style="padding: 10px 24px; font-size: 1.1rem;">
+        CHƠI VÁN MỚI 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- AUDIO SYNTHESIZER (Web Audio API) -->
+  <script>
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+      playMoveSound(freq = 420) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.5, this.ctx.currentTime + 0.08);
+
+          gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch (e) { }
+      }
+      playScrambleSound() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(700, this.ctx.currentTime + 0.15);
+
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.15);
+        } catch (e) { }
+      }
+      playWinSound() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.35);
+          }, idx * 120);
+        });
+      }
+    }
+    const sound = new SoundFX();
+  </script>
+
+  <!-- MAIN 3D RUBIK ENGINE -->
+  <script>
+    // --- 1. Scene, Camera, Renderer Setup ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+    const defaultCamPos = new THREE.Vector3(5.5, 4.8, 6.5);
+    camera.position.copy(defaultCamPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 4;
+    controls.maxDistance = 14;
+
+    // --- 2. Lighting with Cyber Vibe ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
+
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    mainLight.position.set(8, 12, 10);
+    scene.add(mainLight);
+
+    const cyanRim = new THREE.DirectionalLight(0x00f3ff, 0.85);
+    cyanRim.position.set(-10, -5, -8);
+    scene.add(cyanRim);
+
+    const pinkRim = new THREE.DirectionalLight(0xff007b, 0.6);
+    pinkRim.position.set(8, -8, -6);
+    scene.add(pinkRim);
+
+    // Glowing platform under cube
+    const gridHelper = new THREE.GridHelper(12, 24, 0x00f3ff, 0x1f293d);
+    gridHelper.position.y = -2.8;
+    scene.add(gridHelper);
+
+    // --- 3. Rubik Sticker Texture Generator (High Polish) ---
+    function createStickerTexture(colorHex, label = '') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      // Base black bevel
+      ctx.fillStyle = '#12141c';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Rounded colored sticker
+      const rad = 24;
+      const m = 14;
+      ctx.fillStyle = colorHex;
+      ctx.beginPath();
+      ctx.moveTo(m + rad, m);
+      ctx.lineTo(256 - m - rad, m);
+      ctx.quadraticCurveTo(256 - m, m, 256 - m, m + rad);
+      ctx.lineTo(256 - m, 256 - m - rad);
+      ctx.quadraticCurveTo(256 - m, 256 - m, 256 - m - rad, 256 - m);
+      ctx.lineTo(m + rad, 256 - m);
+      ctx.quadraticCurveTo(m, 256 - m, m, 256 - m - rad);
+      ctx.lineTo(m, m + rad);
+      ctx.quadraticCurveTo(m, m, m + rad, m);
+      ctx.closePath();
+      ctx.fill();
+
+      // Inner glossy shine
+      const grad = ctx.createLinearGradient(m, m, 256 - m, 256 - m);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+      grad.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    }
+
+    // Official vibrant Rubik colors
+    const COLOR_DEF = {
+      R: { hex: '#ff1744', name: 'Red/Pink' },   // Right (+X)
+      O: { hex: '#ff6d00', name: 'Orange' },   // Left (-X)
+      W: { hex: '#ffffff', name: 'White' },    // Up (+Y)
+      Y: { hex: '#ffd600', name: 'Yellow' },   // Down (-Y)
+      G: { hex: '#00e676', name: 'Green' },    // Front (+Z)
+      B: { hex: '#00b0ff', name: 'Blue' },     // Back (-Z)
+      K: { hex: '#161922', name: 'Core' }      // Internal face
+    };
+
+    const coreMaterial = new THREE.MeshStandardMaterial({
+      color: 0x12141c,
+      roughness: 0.4,
+      metalness: 0.3
+    });
+
+    const stickerMaterials = {
+      R: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.R.hex), roughness: 0.3, metalness: 0.1 }),
+      O: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.O.hex), roughness: 0.3, metalness: 0.1 }),
+      W: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.W.hex), roughness: 0.3, metalness: 0.1 }),
+      Y: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.Y.hex), roughness: 0.3, metalness: 0.1 }),
+      G: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.G.hex), roughness: 0.3, metalness: 0.1 }),
+      B: new THREE.MeshStandardMaterial({ map: createStickerTexture(COLOR_DEF.B.hex), roughness: 0.3, metalness: 0.1 }),
+    };
+
+    // --- 4. Building 27 Cubelets (3x3x3) ---
+    const cubelets = [];
+    const cubeletSize = 0.96;
+    const spacing = 1.0;
+    const cubeGroup = new THREE.Group();
+    scene.add(cubeGroup);
+
+    // Box geometry face indices: [0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z]
+    for (let x = -1; x <= 1; x++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+          const geom = new THREE.BoxGeometry(cubeletSize, cubeletSize, cubeletSize);
+
+          const mats = [
+            x === 1 ? stickerMaterials.R : coreMaterial,
+            x === -1 ? stickerMaterials.O : coreMaterial,
+            y === 1 ? stickerMaterials.W : coreMaterial,
+            y === -1 ? stickerMaterials.Y : coreMaterial,
+            z === 1 ? stickerMaterials.G : coreMaterial,
+            z === -1 ? stickerMaterials.B : coreMaterial,
+          ];
+
+          const mesh = new THREE.Mesh(geom, mats);
+          mesh.position.set(x * spacing, y * spacing, z * spacing);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+
+          // Track initial stickers for foolproof victory validation
+          mesh.userData = {
+            initialPos: new THREE.Vector3(x, y, z),
+            stickers: []
+          };
+
+          if (x === 1) mesh.userData.stickers.push({ normal: new THREE.Vector3(1, 0, 0), color: 'R' });
+          if (x === -1) mesh.userData.stickers.push({ normal: new THREE.Vector3(-1, 0, 0), color: 'O' });
+          if (y === 1) mesh.userData.stickers.push({ normal: new THREE.Vector3(0, 1, 0), color: 'W' });
+          if (y === -1) mesh.userData.stickers.push({ normal: new THREE.Vector3(0, -1, 0), color: 'Y' });
+          if (z === 1) mesh.userData.stickers.push({ normal: new THREE.Vector3(0, 0, 1), color: 'G' });
+          if (z === -1) mesh.userData.stickers.push({ normal: new THREE.Vector3(0, 0, -1), color: 'B' });
+
+          cubeGroup.add(mesh);
+          cubelets.push(mesh);
+        }
+      }
+    }
+
+    // --- 5. Rotation Logic with Smooth Animation ---
+    let moveQueue = [];
+    let isRotating = false;
+    let moveCount = 0;
+    let timerStarted = false;
+    let timerSeconds = 0;
+    let timerInterval = null;
+    let moveHistory = [];
+    const moveHistoryEl = document.getElementById('history-moves');
+    const moveValEl = document.getElementById('move-val');
+    const timerValEl = document.getElementById('timer-val');
+
+    // Move definitions (axis, coordinate filter, standard clockwise angle)
+    const MOVE_SPECS = {
+      // Faces
+      'U': { axis: 'y', coord: 1, angle: -Math.PI / 2, freq: 520 }, // Clockwise viewing from +Y
+      "U'": { axis: 'y', coord: 1, angle: Math.PI / 2, freq: 520 },
+      'D': { axis: 'y', coord: -1, angle: Math.PI / 2, freq: 380 }, // Clockwise viewing from -Y
+      "D'": { axis: 'y', coord: -1, angle: -Math.PI / 2, freq: 380 },
+      'L': { axis: 'x', coord: -1, angle: Math.PI / 2, freq: 440 }, // Clockwise viewing from -X
+      "L'": { axis: 'x', coord: -1, angle: -Math.PI / 2, freq: 440 },
+      'R': { axis: 'x', coord: 1, angle: -Math.PI / 2, freq: 480 }, // Clockwise viewing from +X
+      "R'": { axis: 'x', coord: 1, angle: Math.PI / 2, freq: 480 },
+      'F': { axis: 'z', coord: 1, angle: -Math.PI / 2, freq: 460 }, // Clockwise viewing from +Z
+      "F'": { axis: 'z', coord: 1, angle: Math.PI / 2, freq: 460 },
+      'B': { axis: 'z', coord: -1, angle: Math.PI / 2, freq: 410 }, // Clockwise viewing from -Z
+      "B'": { axis: 'z', coord: -1, angle: -Math.PI / 2, freq: 410 },
+      // Slices
+      'M': { axis: 'x', coord: 0, angle: Math.PI / 2, freq: 350 }, // Middle vertical
+      "M'": { axis: 'x', coord: 0, angle: -Math.PI / 2, freq: 350 },
+      'E': { axis: 'y', coord: 0, angle: Math.PI / 2, freq: 350 }, // Equator horizontal
+      'S': { axis: 'z', coord: 0, angle: -Math.PI / 2, freq: 350 }  // Standing middle
+    };
+
+    function queueMove(moveNotation, isScramble = false) {
+      if (!MOVE_SPECS[moveNotation]) return;
+      moveQueue.push({ moveNotation, isScramble });
+      if (!isRotating) {
+        processNextMove();
+      }
+    }
+
+    function startTimerIfNeeded() {
+      if (!timerStarted) {
+        timerStarted = true;
+        timerInterval = setInterval(() => {
+          timerSeconds++;
+          const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+          const s = String(timerSeconds % 60).padStart(2, '0');
+          timerValEl.textContent = `${m}:${s}`;
+        }, 1000);
+      }
+    }
+
+    function processNextMove() {
+      if (moveQueue.length === 0) {
+        isRotating = false;
+        checkSolvedState();
+        return;
+      }
+
+      isRotating = true;
+      const { moveNotation, isScramble } = moveQueue.shift();
+      const spec = MOVE_SPECS[moveNotation];
+
+      if (!isScramble) {
+        startTimerIfNeeded();
+        moveCount++;
+        moveValEl.textContent = moveCount;
+        moveHistory.push(moveNotation);
+        if (moveHistory.length > 8) moveHistory.shift();
+        moveHistoryEl.textContent = moveHistory.join('  •  ');
+        sound.playMoveSound(spec.freq);
+      }
+
+      // Group targeted cubelets
+      const pivot = new THREE.Object3D();
+      scene.add(pivot);
+
+      const targetCubelets = cubelets.filter(c => {
+        // Find position relative to cubeGroup
+        const worldPos = new THREE.Vector3();
+        c.getWorldPosition(worldPos);
+        return Math.abs(worldPos[spec.axis] - spec.coord) < 0.35;
+      });
+
+      targetCubelets.forEach(c => {
+        pivot.attach(c);
+      });
+
+      // Rotation animation duration: very quick for scramble, smooth for player
+      const duration = isScramble ? 60 : 180;
+      const startTime = performance.now();
+      const targetAngle = spec.angle;
+      const rotationVector = new THREE.Vector3();
+      rotationVector[spec.axis] = 1;
+
+      function animateRotation(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out cubic
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const currentAngle = targetAngle * ease;
+
+        pivot.rotation[spec.axis] = currentAngle;
+
+        if (progress < 1) {
+          requestAnimationFrame(animateRotation);
+        } else {
+          // Finalize rotation
+          pivot.rotation[spec.axis] = targetAngle;
+          pivot.updateMatrixWorld(true);
+
+          targetCubelets.forEach(c => {
+            cubeGroup.attach(c);
+            // Snap positions to rounded integers to prevent floating drift
+            c.position.x = Math.round(c.position.x);
+            c.position.y = Math.round(c.position.y);
+            c.position.z = Math.round(c.position.z);
+            c.updateMatrixWorld(true);
+          });
+
+          scene.remove(pivot);
+          processNextMove();
+        }
+      }
+
+      requestAnimationFrame(animateRotation);
+    }
+
+    // --- 6. Scramble Generator ---
+    const basicMoves = ['U', "U'", 'D', "D'", 'L', "L'", 'R', "R'", 'F', "F'", 'B', "B'"];
+    document.getElementById('btn-scramble').addEventListener('click', () => {
+      sound.playScrambleSound();
+      // Generate 20 scramble moves
+      const scrambleSeq = [];
+      let lastFace = '';
+      for (let i = 0; i < 20; i++) {
+        let move;
+        do {
+          move = basicMoves[Math.floor(Math.random() * basicMoves.length)];
+        } while (move[0] === lastFace);
+        lastFace = move[0];
+        scrambleSeq.push(move);
+      }
+
+      // Reset counters before scramble
+      clearInterval(timerInterval);
+      timerStarted = false;
+      timerSeconds = 0;
+      timerValEl.textContent = '00:00';
+      moveCount = 0;
+      moveValEl.textContent = '0';
+      moveHistory = ['Xáo trộn...'];
+      moveHistoryEl.textContent = scrambleSeq.slice(0, 10).join(' ') + '...';
+
+      scrambleSeq.forEach(m => queueMove(m, true));
+    });
+
+    // Reset button
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (confirm('Bạn có muốn làm mới khối Rubik về trạng thái ban đầu?')) {
+        location.reload();
+      }
+    });
+
+    // --- 7. Solved State Check (Mathematical Normal Validation) ---
+    function checkSolvedState() {
+      // Need at least 5 user moves and timer started to count as victory
+      if (!timerStarted || moveCount < 4) return;
+
+      const directions = [
+        { dir: new THREE.Vector3(1, 0, 0), face: 'R' },
+        { dir: new THREE.Vector3(-1, 0, 0), face: 'O' },
+        { dir: new THREE.Vector3(0, 1, 0), face: 'W' },
+        { dir: new THREE.Vector3(0, -1, 0), face: 'Y' },
+        { dir: new THREE.Vector3(0, 0, 1), face: 'G' },
+        { dir: new THREE.Vector3(0, 0, -1), face: 'B' },
+      ];
+
+      for (const d of directions) {
+        const faceColors = [];
+        for (const c of cubelets) {
+          const cQuat = c.quaternion;
+          for (const s of c.userData.stickers) {
+            const worldNorm = s.normal.clone().applyQuaternion(cQuat);
+            if (worldNorm.dot(d.dir) > 0.85) {
+              faceColors.push(s.color);
+            }
+          }
+        }
+
+        // Each face must have exactly 9 stickers of the exact same color
+        if (faceColors.length !== 9) return;
+        const firstColor = faceColors[0];
+        if (!faceColors.every(col => col === firstColor)) {
+          return; // Not solved yet
+        }
+      }
+
+      // VICTORY!
+      clearInterval(timerInterval);
+      sound.playWinSound();
+      triggerConfetti();
+      document.getElementById('win-time').textContent = timerValEl.textContent;
+      document.getElementById('win-moves').textContent = moveCount;
+      document.getElementById('victory-modal').classList.add('show');
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+        setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            angle: 60,
+            spread: 60,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 80,
+            angle: 120,
+            spread: 60,
+            origin: { x: 1 }
+          });
+        }, 300);
+      }
+    }
+
+    function restartAfterWin() {
+      document.getElementById('victory-modal').classList.remove('show');
+      location.reload();
+    }
+
+    // --- 8. Connect All Surrounding Buttons ---
+    document.querySelectorAll('.cube-btn, .mini-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const move = btn.getAttribute('data-move');
+        if (move) {
+          queueMove(move);
+        }
+      });
+    });
+
+    // Sound toggle
+    const soundBtn = document.getElementById('btn-sound');
+    const soundIcon = document.getElementById('sound-icon');
+    soundBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      soundIcon.textContent = sound.enabled ? '🔊' : '🔇';
+    });
+
+    // Guide Modal
+    const helpModal = document.getElementById('help-modal');
+    document.getElementById('btn-help').addEventListener('click', () => {
+      helpModal.classList.add('show');
+    });
+    function toggleHelpModal() {
+      helpModal.classList.toggle('show');
+    }
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) helpModal.classList.remove('show');
+    });
+
+    // --- Quick Guide Toggle ---
+    function toggleQuickGuide() {
+      const qg = document.getElementById('quick-guide');
+      const btn = document.getElementById('qg-toggle-btn');
+      if (!qg) return;
+      qg.classList.toggle('collapsed');
+      if (btn) btn.textContent = qg.classList.contains('collapsed') ? '+' : '−';
+    }
+
+    // --- 9. Camera Presets & Orbit Helper ---
+    const cameraPresets = ['iso', 'front', 'top', 'right'];
+    let currentCameraIndex = 0;
+
+    function setCameraView(preset) {
+      const targetPos = new THREE.Vector3();
+      if (preset === 'iso') targetPos.set(5.5, 4.8, 6.5);
+      else if (preset === 'front') targetPos.set(0, 0, 8.5);
+      else if (preset === 'top') targetPos.set(0, 8.5, 0.01);
+      else if (preset === 'right') targetPos.set(8.5, 0, 0);
+
+      const startPos = camera.position.clone();
+      const startTime = performance.now();
+      const dur = 400;
+
+      function stepCam(now) {
+        const prog = Math.min((now - startTime) / dur, 1);
+        const ease = 1 - Math.pow(1 - prog, 3);
+        camera.position.lerpVectors(startPos, targetPos, ease);
+        controls.update();
+        if (prog < 1) requestAnimationFrame(stepCam);
+      }
+      requestAnimationFrame(stepCam);
+    }
+
+    // Cycle camera with keyboard 'C'
+    function cycleCameraPreset() {
+      currentCameraIndex = (currentCameraIndex + 1) % cameraPresets.length;
+      const preset = cameraPresets[currentCameraIndex];
+      setCameraView(preset);
+      showKeyToast('Camera: ' + preset.toUpperCase(), '📷 C');
+    }
+
+    // Orbit Camera via Arrow Keys
+    function orbitCamera(deltaTheta, deltaPhi) {
+      const offset = camera.position.clone().sub(controls.target);
+      const radius = offset.length();
+      let theta = Math.atan2(offset.x, offset.z);
+      let phi = Math.acos(Math.max(-1, Math.min(1, offset.y / radius)));
+
+      theta += deltaTheta;
+      phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi + deltaPhi));
+
+      camera.position.x = controls.target.x + radius * Math.sin(phi) * Math.sin(theta);
+      camera.position.y = controls.target.y + radius * Math.cos(phi);
+      camera.position.z = controls.target.z + radius * Math.sin(phi) * Math.cos(theta);
+      camera.lookAt(controls.target);
+      controls.update();
+    }
+
+    // --- Toast HUD & Button Flash ---
+    let toastTimeout = null;
+    function showKeyToast(text, keyLabel) {
+      const toast = document.getElementById('key-toast');
+      if (!toast) return;
+      toast.innerHTML = `<span class="toast-key">${keyLabel}</span><span>${text}</span>`;
+      toast.style.display = 'flex';
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 950);
+    }
+
+    function flashButton(moveOrSelector) {
+      let btn = null;
+      if (moveOrSelector.startsWith('#') || moveOrSelector.startsWith('.')) {
+        btn = document.querySelector(moveOrSelector);
+      } else {
+        btn = document.querySelector(`[data-move="${moveOrSelector}"]`);
+      }
+      if (btn) {
+        btn.classList.add('btn-pressed');
+        setTimeout(() => btn.classList.remove('btn-pressed'), 180);
+      }
+    }
+
+    // --- 10. Comprehensive Keyboard Controls ---
+    const NUM_KEY_MAP = {
+      '1': 'U',
+      '2': "U'",
+      '3': 'D',
+      '4': "D'",
+      '5': 'L',
+      '6': "L'",
+      '7': 'R',
+      '8': "R'",
+      '9': 'F',
+      '0': "F'",
+      '-': 'B',
+      '=': "B'"
+    };
+
+    const MOVE_NAMES_VI = {
+      'U': 'Mặt Trên ↻',
+      "U'": 'Mặt Trên ↺',
+      'D': 'Mặt Dưới ↻',
+      "D'": 'Mặt Dưới ↺',
+      'L': 'Mặt Trái ↻',
+      "L'": 'Mặt Trái ↺',
+      'R': 'Mặt Phải ↻',
+      "R'": 'Mặt Phải ↺',
+      'F': 'Mặt Trước ↻',
+      "F'": 'Mặt Trước ↺',
+      'B': 'Mặt Sau ↻',
+      "B'": 'Mặt Sau ↺',
+      'M': 'Tầng Giữa M ↓',
+      "M'": 'Tầng Giữa M ↑',
+      'E': 'Tầng Giữa E →',
+      'S': 'Tầng Giữa S ↻'
+    };
+
+    window.addEventListener('keydown', (e) => {
+      // Ignore if user is inside an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const rawKey = e.key;
+      const keyUpper = rawKey.toUpperCase();
+      const isShift = e.shiftKey;
+
+      // 1. Arrow keys for Camera Orbit
+      if (rawKey === 'ArrowLeft') {
+        e.preventDefault();
+        orbitCamera(-0.12, 0);
+        showKeyToast('Xoay Camera Trái', '←');
+        return;
+      }
+      if (rawKey === 'ArrowRight') {
+        e.preventDefault();
+        orbitCamera(0.12, 0);
+        showKeyToast('Xoay Camera Phải', '→');
+        return;
+      }
+      if (rawKey === 'ArrowUp') {
+        e.preventDefault();
+        orbitCamera(0, -0.1);
+        showKeyToast('Xoay Camera Lên', '↑');
+        return;
+      }
+      if (rawKey === 'ArrowDown') {
+        e.preventDefault();
+        orbitCamera(0, 0.1);
+        showKeyToast('Xoay Camera Xuống', '↓');
+        return;
+      }
+
+      // 2. Action Hotkeys
+      if (rawKey === ' ' || rawKey === 'Spacebar') {
+        e.preventDefault();
+        flashButton('#btn-scramble');
+        showKeyToast('Xáo Trộn Khối 20 Bước', 'Space');
+        document.getElementById('btn-scramble').click();
+        return;
+      }
+
+      if (rawKey === 'Backspace' || rawKey === 'Delete') {
+        e.preventDefault();
+        flashButton('#btn-reset');
+        showKeyToast('Làm Mới Ban Đầu', 'Del');
+        document.getElementById('btn-reset').click();
+        return;
+      }
+
+      if (keyUpper === 'P') {
+        e.preventDefault();
+        flashButton('#btn-sound');
+        document.getElementById('btn-sound').click();
+        showKeyToast(sound.enabled ? 'Đã bật âm thanh 🔊' : 'Đã tắt âm thanh 🔇', 'P');
+        return;
+      }
+
+      if (keyUpper === 'H') {
+        e.preventDefault();
+        flashButton('#btn-help');
+        toggleHelpModal();
+        return;
+      }
+
+      if (keyUpper === 'C') {
+        e.preventDefault();
+        cycleCameraPreset();
+        return;
+      }
+
+      if (rawKey === 'Escape') {
+        if (helpModal.classList.contains('show')) toggleHelpModal();
+        return;
+      }
+
+      // 3. Number Keys (1-0, -, =)
+      if (NUM_KEY_MAP[rawKey]) {
+        e.preventDefault();
+        const move = NUM_KEY_MAP[rawKey];
+        flashButton(move);
+        showKeyToast(MOVE_NAMES_VI[move] || move, rawKey);
+        queueMove(move);
+        return;
+      }
+
+      // 4. Standard Face Letters (U, D, L, R, F, B, M, E, S)
+      const validFaces = ['U', 'D', 'L', 'R', 'F', 'B', 'M', 'E', 'S'];
+      if (validFaces.includes(keyUpper)) {
+        e.preventDefault();
+        const move = isShift ? `${keyUpper}'` : keyUpper;
+        flashButton(move);
+        showKeyToast(MOVE_NAMES_VI[move] || move, isShift ? `Shift+${keyUpper}` : keyUpper);
+        queueMove(move);
+      }
+    });
+
+    // --- 11. Direct 3D Touch & Drag (Chạm vuốt trực tiếp trên mặt Rubik) ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isCubeDragging = false;
+    let dragStartPos = null;
+    let dragCubelet = null;
+    let dragFaceNormal = null;
+
+    function getPointerPos(e) {
+      if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    container.addEventListener('pointerdown', (e) => {
+      if (isRotating) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      const p = getPointerPos(e);
+      mouse.x = ((p.x - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((p.y - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(cubelets);
+      if (intersects.length > 0 && intersects[0].face) {
+        dragCubelet = intersects[0].object;
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(dragCubelet.matrixWorld);
+        dragFaceNormal = intersects[0].face.normal.clone().applyMatrix3(normalMatrix).normalize().round();
+        dragStartPos = { x: p.x, y: p.y };
+        isCubeDragging = true;
+        controls.enabled = false;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isCubeDragging || !dragStartPos || !dragCubelet || isRotating) return;
+      const p = getPointerPos(e);
+      const dx = p.x - dragStartPos.x;
+      const dy = p.y - dragStartPos.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 28) {
+        const pos = dragCubelet.position;
+        const n = dragFaceNormal;
+        let move = null;
+
+        // Front (+Z) or Back (-Z)
+        if (Math.abs(n.z) > 0.7) {
+          const sign = n.z > 0 ? 1 : -1;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            const dir = (dx > 0) ? -1 : 1;
+            if (pos.y === 1) move = (dir * sign === -1) ? 'U' : "U'";
+            else if (pos.y === -1) move = (dir * sign === -1) ? "D'" : 'D';
+            else if (pos.y === 0) move = (dir * sign === -1) ? 'E' : 'E';
+          } else {
+            const dir = (dy < 0) ? 1 : -1;
+            if (pos.x === 1) move = (dir * sign === 1) ? 'R' : "R'";
+            else if (pos.x === -1) move = (dir * sign === 1) ? "L'" : 'L';
+            else if (pos.x === 0) move = (dir * sign === 1) ? "M'" : 'M';
+          }
+        }
+        // Right (+X) or Left (-X)
+        else if (Math.abs(n.x) > 0.7) {
+          const sign = n.x > 0 ? 1 : -1;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            const dir = (dx > 0) ? -1 : 1;
+            if (pos.y === 1) move = (dir * sign === -1) ? 'U' : "U'";
+            else if (pos.y === -1) move = (dir * sign === -1) ? "D'" : 'D';
+            else if (pos.y === 0) move = (dir * sign === -1) ? 'E' : 'E';
+          } else {
+            const dir = (dy < 0) ? 1 : -1;
+            if (pos.z === 1) move = (dir * sign === 1) ? 'F' : "F'";
+            else if (pos.z === -1) move = (dir * sign === 1) ? "B'" : 'B';
+            else if (pos.z === 0) move = (dir * sign === 1) ? 'S' : 'S';
+          }
+        }
+        // Top (+Y) or Bottom (-Y)
+        else if (Math.abs(n.y) > 0.7) {
+          const sign = n.y > 0 ? 1 : -1;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            const dir = (dx > 0) ? 1 : -1;
+            if (pos.z === 1) move = (dir * sign === 1) ? "F'" : 'F';
+            else if (pos.z === -1) move = (dir * sign === 1) ? 'B' : "B'";
+          } else {
+            const dir = (dy < 0) ? 1 : -1;
+            if (pos.x === 1) move = (dir * sign === 1) ? 'R' : "R'";
+            else if (pos.x === -1) move = (dir * sign === 1) ? "L'" : 'L';
+          }
+        }
+
+        if (move) {
+          flashButton(move);
+          showKeyToast(`👆 Vuốt 3D: ${MOVE_NAMES_VI[move] || move}`, 'Touch');
+          queueMove(move);
+        }
+
+        isCubeDragging = false;
+        dragStartPos = null;
+        dragCubelet = null;
+        controls.enabled = true;
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      isCubeDragging = false;
+      dragStartPos = null;
+      dragCubelet = null;
+      controls.enabled = true;
+    });
+
+    // --- 12. Google MediaPipe Hands (Cảm Ứng 2 Bàn Tay & Vặn Cổ Tay) ---
+    let isHandTrackingRunning = false;
+    let cameraInstance = null;
+    let handsInstance = null;
+    const handHud = document.getElementById('hand-hud');
+    const hudDot = document.getElementById('hud-dot');
+    const hudStatusText = document.getElementById('hud-status-text');
+    const teleHands = document.getElementById('tele-hands');
+    const teleMode = document.getElementById('tele-mode');
+    const teleAngle = document.getElementById('tele-angle');
+    const hudGuideHint = document.getElementById('hud-guide-hint');
+    const handCanvas = document.getElementById('hand-canvas');
+    const handCtx = handCanvas.getContext('2d');
+    const webcamVideo = document.getElementById('webcam-video');
+
+    let prevHandState = {
+      baselineAngleL: null,
+      baselineAngleR: null,
+      prevIndexR: null,
+      prevIndexL: null,
+      lastTwistTime: 0
+    };
+
+    const HAND_CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [5,9],[9,10],[10,11],[11,12],
+      [9,13],[13,14],[14,15],[15,16],
+      [13,17],[17,18],[18,19],[19,20],
+      [0,17]
+    ];
+
+    function drawHandSkeleton(landmarks, color = '#00f3ff') {
+      const w = handCanvas.width;
+      const h = handCanvas.height;
+
+      handCtx.strokeStyle = color;
+      handCtx.lineWidth = 2.5;
+      for (const [i, j] of HAND_CONNECTIONS) {
+        handCtx.beginPath();
+        handCtx.moveTo(landmarks[i].x * w, landmarks[i].y * h);
+        handCtx.lineTo(landmarks[j].x * w, landmarks[j].y * h);
+        handCtx.stroke();
+      }
+
+      for (let i = 0; i < landmarks.length; i++) {
+        const pt = landmarks[i];
+        handCtx.beginPath();
+        handCtx.arc(pt.x * w, pt.y * h, (i === 4 || i === 8 || i === 12) ? 4.5 : 2.5, 0, Math.PI * 2);
+        handCtx.fillStyle = (i === 4 || i === 8) ? '#ff007b' : '#ffe600';
+        handCtx.fill();
+      }
+    }
+
+    async function toggleHandTracking() {
+      if (isHandTrackingRunning) {
+        stopHandTracking();
+      } else {
+        await startHandTracking();
+      }
+    }
+
+    async function startHandTracking() {
+      const btn = document.getElementById('btn-handtrack');
+      const btnText = document.getElementById('handtrack-text');
+      hudStatusText.textContent = 'Đang khởi tạo AI...';
+      hudDot.className = 'hud-dot waiting';
+      handHud.style.display = 'flex';
+
+      try {
+        if (!handsInstance) {
+          handsInstance = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+          });
+
+          handsInstance.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 0, // Lite ultra-fast model (tăng tốc độ gấp 3 lần, cực nhẹ cho GPU/CPU)
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+
+          handsInstance.onResults(onHandResults);
+        }
+
+        let isProcessingFrame = false;
+        let lastAiFrameTime = 0;
+
+        if (!cameraInstance) {
+          cameraInstance = new Camera(webcamVideo, {
+            onFrame: async () => {
+              const now = performance.now();
+              // Cân bằng luồng: Giới hạn AI xử lý ~28-30 FPS để Three.js luôn giữ vững 60 FPS mượt mà
+              if (isHandTrackingRunning && webcamVideo.readyState >= 2 && !isProcessingFrame && (now - lastAiFrameTime >= 32)) {
+                isProcessingFrame = true;
+                lastAiFrameTime = now;
+                try {
+                  await handsInstance.send({ image: webcamVideo });
+                } catch(e) {}
+                finally {
+                  isProcessingFrame = false;
+                }
+              }
+            },
+            width: 320,
+            height: 240
+          });
+        }
+
+        await cameraInstance.start();
+        isHandTrackingRunning = true;
+        btn.classList.add('active-glow');
+        btnText.textContent = 'TẮT TAY';
+        hudStatusText.textContent = 'AI 60FPS Sẵn sàng';
+        hudDot.className = 'hud-dot';
+        showKeyToast('🖐️ Đã kích hoạt Mode Bàn Tay Siêu Tốc!', 'AI Lite 60FPS');
+      } catch (err) {
+        console.error('Camera error:', err);
+        alert('Không thể mở Camera: Vui lòng cho phép quyền truy cập Webcam trên trình duyệt.');
+        stopHandTracking();
+      }
+    }
+
+    function stopHandTracking() {
+      isHandTrackingRunning = false;
+      if (cameraInstance) {
+        try { cameraInstance.stop(); } catch(e){}
+      }
+      handHud.style.display = 'none';
+      const btn = document.getElementById('btn-handtrack');
+      const btnText = document.getElementById('handtrack-text');
+      btn.classList.remove('active-glow');
+      btnText.textContent = 'CẢM ỨNG TAY';
+      prevHandState.baselineAngleL = null;
+      prevHandState.baselineAngleR = null;
+      prevHandState.prevIndexR = null;
+      prevHandState.prevIndexL = null;
+      showKeyToast('Đã tắt cảm ứng bàn tay', 'Camera');
+    }
+
+    function onHandResults(results) {
+      if (!isHandTrackingRunning) return;
+
+      handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+      handCtx.save();
+      handCtx.drawImage(results.image, 0, 0, handCanvas.width, handCanvas.height);
+      handCtx.restore();
+
+      const numHands = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+      teleHands.textContent = numHands;
+
+      if (numHands === 0) {
+        hudStatusText.textContent = 'Tìm bàn tay...';
+        hudDot.className = 'hud-dot waiting';
+        teleMode.textContent = 'Chờ tay';
+        teleAngle.textContent = '0°';
+        hudGuideHint.textContent = 'Đưa bàn tay trước camera';
+        prevHandState.baselineAngleL = null;
+        prevHandState.baselineAngleR = null;
+        return;
+      }
+
+      hudStatusText.textContent = `${numHands} Bàn tay`;
+      hudDot.className = 'hud-dot';
+
+      let leftHand = null;
+      let rightHand = null;
+
+      // Đảo chiều mapping để khớp chính xác với tay trái / tay phải thực tế của người dùng
+      if (numHands === 1) {
+        const lm = results.multiHandLandmarks[0];
+        if (lm[0].x < 0.5) {
+          rightHand = lm;
+          drawHandSkeleton(lm, '#ff007b');
+        } else {
+          leftHand = lm;
+          drawHandSkeleton(lm, '#00f3ff');
+        }
+      } else if (numHands >= 2) {
+        const lm1 = results.multiHandLandmarks[0];
+        const lm2 = results.multiHandLandmarks[1];
+        if (lm1[0].x < lm2[0].x) {
+          rightHand = lm1;
+          leftHand = lm2;
+        } else {
+          rightHand = lm2;
+          leftHand = lm1;
+        }
+        drawHandSkeleton(leftHand, '#00f3ff');
+        drawHandSkeleton(rightHand, '#ff007b');
+      }
+
+      // Vẽ nhãn tên bàn tay trực tiếp trên khung camera để người dùng nhìn thấy rõ ràng
+      const w = handCanvas.width;
+      const h = handCanvas.height;
+      handCtx.font = 'bold 11px Orbitron, sans-serif';
+      if (leftHand) {
+        handCtx.fillStyle = '#00f3ff';
+        handCtx.fillText('TAY TRÁI [L]', leftHand[0].x * w - 30, leftHand[0].y * h - 12);
+      }
+      if (rightHand) {
+        handCtx.fillStyle = '#ff007b';
+        handCtx.fillText('TAY PHẢI [R]', rightHand[0].x * w - 30, rightHand[0].y * h - 12);
+      }
+
+      // Calculate hand angle from Wrist (0) to Middle MCP (9)
+      function getHandAngle(lm) {
+        const dx = lm[9].x - lm[0].x;
+        const dy = lm[9].y - lm[0].y;
+        return Math.atan2(dy, dx) * (180 / Math.PI);
+      }
+
+      const now = performance.now();
+      const canTwist = (now - prevHandState.lastTwistTime > 420) && !isRotating;
+
+      // 1. TAY PHẢI: LẬT TẦNG R (Vặn cổ tay hoặc gạt ngón trỏ)
+      if (rightHand) {
+        const angleR = getHandAngle(rightHand);
+        if (prevHandState.baselineAngleR === null) {
+          prevHandState.baselineAngleR = angleR;
+        }
+
+        // Tính góc vặn thực tế so với tư thế chuẩn (Baseline)
+        const twistR = angleR - prevHandState.baselineAngleR;
+        teleAngle.textContent = `${twistR > 0 ? '+' : ''}${Math.round(twistR)}°`;
+
+        // Check A: Vặn cổ tay phải
+        if (canTwist) {
+          if (twistR > 18) {
+            queueMove('R');
+            flashButton('R');
+            showKeyToast('🖐️ Vặn Cổ Tay: LẬT PHẢI R ↻', 'Hand-R');
+            prevHandState.baselineAngleR = angleR;
+            prevHandState.lastTwistTime = now;
+            teleMode.textContent = 'Lật R ↻';
+          } else if (twistR < -18) {
+            queueMove("R'");
+            flashButton("R'");
+            showKeyToast('🖐️ Vặn Cổ Tay: LẬT PHẢI R ↺', 'Hand-R');
+            prevHandState.baselineAngleR = angleR;
+            prevHandState.lastTwistTime = now;
+            teleMode.textContent = "Lật R' ↺";
+          }
+        }
+
+        // Check B: Gạt ngón trỏ phải (Flick finger - siêu nhạy để lật tầng U hoặc R)
+        const tip8 = rightHand[8];
+        if (prevHandState.prevIndexR && canTwist) {
+          const dt = (now - prevHandState.prevIndexR.t) / 1000;
+          if (dt > 0.03 && dt < 0.25) {
+            const vx = (tip8.x - prevHandState.prevIndexR.x) / dt;
+            const vy = (tip8.y - prevHandState.prevIndexR.y) / dt;
+
+            // Gạt ngón tay sang trái (mirror video -> tip8.x giảm): Lật mặt trên U
+            if (vx < -1.2) {
+              queueMove('U');
+              flashButton('U');
+              showKeyToast('👆 Gạt Ngón Tay: LẬT TRÊN U ↻', 'Flick-U');
+              prevHandState.lastTwistTime = now;
+              teleMode.textContent = 'Gạt U ↻';
+            }
+            // Gạt ngón tay sang phải: Lật mặt trên U'
+            else if (vx > 1.2) {
+              queueMove("U'");
+              flashButton("U'");
+              showKeyToast('👆 Gạt Ngón Tay: LẬT TRÊN U ↺', 'Flick-U');
+              prevHandState.lastTwistTime = now;
+              teleMode.textContent = "Gạt U' ↺";
+            }
+            // Búng ngón tay lên: Lật mặt trước F
+            else if (vy < -1.4) {
+              queueMove('F');
+              flashButton('F');
+              showKeyToast('👆 Búng Ngón Tay: LẬT TRƯỚC F ↻', 'Flick-F');
+              prevHandState.lastTwistTime = now;
+              teleMode.textContent = 'Lật F ↻';
+            }
+          }
+        }
+        prevHandState.prevIndexR = { x: tip8.x, y: tip8.y, t: now };
+
+        // Từ từ cập nhật baseline khi tay thả lỏng tự nhiên
+        prevHandState.baselineAngleR = prevHandState.baselineAngleR * 0.92 + angleR * 0.08;
+      }
+
+      // 2. TAY TRÁI: LẬT TẦNG L (Vặn cổ tay trái hoặc gạt ngón trỏ)
+      if (leftHand) {
+        const angleL = getHandAngle(leftHand);
+        if (prevHandState.baselineAngleL === null) {
+          prevHandState.baselineAngleL = angleL;
+        }
+
+        const twistL = angleL - prevHandState.baselineAngleL;
+
+        if (canTwist) {
+          if (twistL > 18) {
+            queueMove('L');
+            flashButton('L');
+            showKeyToast('🖐️ Vặn Cổ Tay: LẬT TRÁI L ↻', 'Hand-L');
+            prevHandState.baselineAngleL = angleL;
+            prevHandState.lastTwistTime = now;
+            teleMode.textContent = 'Lật L ↻';
+          } else if (twistL < -18) {
+            queueMove("L'");
+            flashButton("L'");
+            showKeyToast('🖐️ Vặn Cổ Tay: LẬT TRÁI L ↺', 'Hand-L');
+            prevHandState.baselineAngleL = angleL;
+            prevHandState.lastTwistTime = now;
+            teleMode.textContent = "Lật L' ↺";
+          }
+        }
+
+        // Búng ngón trỏ tay trái
+        const tip8L = leftHand[8];
+        if (prevHandState.prevIndexL && canTwist) {
+          const dt = (now - prevHandState.prevIndexL.t) / 1000;
+          if (dt > 0.03 && dt < 0.25) {
+            const vy = (tip8L.y - prevHandState.prevIndexL.y) / dt;
+            if (vy < -1.4) {
+              queueMove('B');
+              flashButton('B');
+              showKeyToast('👆 Búng Ngón Tay: LẬT SAU B ↻', 'Flick-B');
+              prevHandState.lastTwistTime = now;
+              teleMode.textContent = 'Lật B ↻';
+            }
+          }
+        }
+        prevHandState.prevIndexL = { x: tip8L.x, y: tip8L.y, t: now };
+
+        prevHandState.baselineAngleL = prevHandState.baselineAngleL * 0.92 + angleL * 0.08;
+      }
+
+      if (leftHand && rightHand) {
+        hudGuideHint.textContent = 'Vặn cổ tay phải (R) / trái (L) hoặc gạt ngón trỏ (U)';
+      } else {
+        hudGuideHint.textContent = 'Vặn cổ tay hoặc gạt nhanh ngón trỏ để LẬT tầng';
+      }
+    }
+
+    // --- 13. Render Loop & Responsive Resize ---
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Subtle idle floating animation when not actively rotating
+    let clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      const time = clock.getElapsedTime();
+      // Gentle floating bob
+      cubeGroup.position.y = Math.sin(time * 1.5) * 0.08;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+
+</html>
